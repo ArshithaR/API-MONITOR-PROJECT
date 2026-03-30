@@ -3,23 +3,30 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 import os
 
-# Create the instances HERE (outside create_app)
+# Create the instances outside create_app
 db = SQLAlchemy()
 login_manager = LoginManager()
 
 def create_app():
     app = Flask(__name__)
     
-    # Use a absolute path for the DB to avoid "Instance" folder issues
     basedir = os.path.abspath(os.path.dirname(__file__))
     app.config['SECRET_KEY'] = 'your-secret-key'
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'database.db')
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-    # Initialize the instances with the app
     db.init_app(app)
     login_manager.init_app(app)
+    
+    # This must match the blueprint name and function name (e.g., 'main.login')
     login_manager.login_view = 'main.login'
+
+    # Move the user_loader inside create_app or just below the login_manager init
+    from app.models import User
+    
+    @login_manager.user_loader
+    def load_user(user_id):
+        return User.query.get(int(user_id))
 
     from app.routes import main
     app.register_blueprint(main)
