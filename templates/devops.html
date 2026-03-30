@@ -1,0 +1,18 @@
+{% extends "layout.html" %}
+{% block content %}
+<h3>DevOps Control Center</h3>
+<div class="row mt-4">
+    <div class="col-md-6">
+        <div class="alert alert-dark"><strong>Docker Status:</strong> Running (Container ID: 4f1a2b)</div>
+        <div class="alert alert-info"><strong>Last Deployment:</strong> Today at 12:45 PM</div>
+    </div>
+    <div class="col-md-6">
+        <div class="bg-dark text-success p-3 rounded" style="font-family: monospace; height: 150px; overflow-y: scroll;">
+            [INFO] Starting monitor worker...<br>
+            [DEBUG] Pinging https://google.com - 200 OK<br>
+            [DEBUG] Pinging https://github.com - 200 OK<br>
+            [LOG] Data saved to SQLite database.
+        </div>
+    </div>
+</div>
+{% endblock %}

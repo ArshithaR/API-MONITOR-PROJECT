@@ -1,0 +1,14 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="card shadow mx-auto" style="max-width: 500px;">
+    <div class="card-body">
+        <h3>Add New API</h3>
+        <form method="POST">
+            <div class="mb-3"><label>API Name</label><input name="name" class="form-control" placeholder="e.g. Google" required></div>
+            <div class="mb-3"><label>API URL</label><input name="url" class="form-control" placeholder="https://..." required></div>
+            <div class="mb-3"><label>Interval (seconds)</label><input type="number" name="interval" class="form-control" value="60"></div>
+            <button class="btn btn-success w-100">Start Monitoring</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,322 @@
+{% extends "layout.html" %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>📊 Performance Analytics</h2>
+    <a href="{{ url_for('main.dashboard') }}" class="btn btn-outline-dark">← Back to Dashboard</a>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-primary text-white">Graph Options</div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Select API</label>
+                    <select id="apiSelector" class="form-select">
+                        {% for api in apis %}
+                        <option value="{{ api.id }}">{{ api.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Chart Type</label>
+                    <div class="btn-group-vertical w-100" role="group">
+                        <input type="radio" class="btn-check" name="chartType" id="lineChart" value="line" checked>
+                        <label class="btn btn-outline-primary text-start" for="lineChart">📈 Line Chart</label>
+                        
+                        <input type="radio" class="btn-check" name="chartType" id="barChart" value="bar">
+                        <label class="btn btn-outline-primary text-start" for="barChart">📊 Bar Chart</label>
+                        
+                        <input type="radio" class="btn-check" name="chartType" id="areaChart" value="area">
+                        <label class="btn btn-outline-primary text-start" for="areaChart">🏔️ Area Chart</label>
+                        
+                        <input type="radio" class="btn-check" name="chartType" id="pieChart" value="pie">
+                        <label class="btn btn-outline-primary text-start" for="pieChart">🥧 Pie Chart</label>
+                        
+                        <input type="radio" class="btn-check" name="chartType" id="doughnutChart" value="doughnut">
+                        <label class="btn btn-outline-primary text-start" for="doughnutChart">🍩 Doughnut Chart</label>
+                        
+                        <input type="radio" class="btn-check" name="chartType" id="scatterChart" value="scatter">
+                        <label class="btn btn-outline-primary text-start" for="scatterChart">✨ Scatter Plot</label>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Data Range</label>
+                    <select id="dataRange" class="form-select">
+                        <option value="10">Last 10 records</option>
+                        <option value="20">Last 20 records</option>
+                        <option value="50">Last 50 records</option>
+                        <option value="100">Last 100 records</option>
+                    </select>
+                </div>
+
+                <button class="btn btn-success w-100" id="refreshBtn">🔄 Refresh Data</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-9">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-dark text-white">
+                <span id="chartTitle">Performance Graph</span>
+            </div>
+            <div class="card-body">
+                <div style="position: relative; height: 450px;">
+                    <canvas id="perfChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-3">
+        <div class="card shadow-sm border-0 bg-light">
+            <div class="card-body text-center">
+                <h6 class="text-muted">Average Response Time</h6>
+                <h3 class="fw-bold text-primary" id="avgTime">--</h3>
+                <small class="text-muted">ms</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card shadow-sm border-0 bg-light">
+            <div class="card-body text-center">
+                <h6 class="text-muted">Max Response Time</h6>
+                <h3 class="fw-bold text-warning" id="maxTime">--</h3>
+                <small class="text-muted">ms</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card shadow-sm border-0 bg-light">
+            <div class="card-body text-center">
+                <h6 class="text-muted">Min Response Time</h6>
+                <h3 class="fw-bold text-success" id="minTime">--</h3>
+                <small class="text-muted">ms</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card shadow-sm border-0 bg-light">
+            <div class="card-body text-center">
+                <h6 class="text-muted">Total Requests</h6>
+                <h3 class="fw-bold text-info" id="totalRequests">--</h3>
+                <small class="text-muted">records</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+    let perfChart = null;
+    let apiChartData = JSON.parse('{{ api_chart_data | tojson | safe }}');
+    const chartTypeMap = {
+        'line': 'line',
+        'bar': 'bar',
+        'area': 'line',
+        'pie': 'pie',
+        'doughnut': 'doughnut',
+        'scatter': 'scatter'
+    };
+
+    function getChartColor(index) {
+        const colors = [
+            { border: '#0d6efd', bg: 'rgba(13, 110, 253, 0.1)' },
+            { border: '#198754', bg: 'rgba(25, 135, 84, 0.1)' },
+            { border: '#fd7e14', bg: 'rgba(253, 126, 20, 0.1)' },
+            { border: '#dc3545', bg: 'rgba(220, 53, 69, 0.1)' },
+            { border: '#0dcaf0', bg: 'rgba(13, 202, 240, 0.1)' }
+        ];
+        return colors[index % colors.length];
+    }
+
+    function getChartTypeLabel(type) {
+        const labels = {
+            'line': '📈 Line Chart',
+            'bar': '📊 Bar Chart',
+            'area': '🏔️ Area Chart',
+            'pie': '🥧 Pie Chart',
+            'doughnut': '🍩 Doughnut Chart',
+            'scatter': '✨ Scatter Plot'
+        };
+        return labels[type] || type;
+    }
+
+    function convertToScatterData(labels, values) {
+        return labels.map((label, index) => ({
+            x: index + 1,
+            y: values[index]
+        }));
+    }
+
+    function updateStatistics(values) {
+        const validValues = values.filter(v => v !== null && v !== undefined && !isNaN(v));
+        
+        if (validValues.length === 0) {
+            document.getElementById('avgTime').textContent = '--';
+            document.getElementById('maxTime').textContent = '--';
+            document.getElementById('minTime').textContent = '--';
+            document.getElementById('totalRequests').textContent = '0';
+            return;
+        }
+
+        const avg = (validValues.reduce((a, b) => a + b, 0) / validValues.length).toFixed(2);
+        const max = Math.max(...validValues).toFixed(2);
+        const min = Math.min(...validValues).toFixed(2);
+
+        document.getElementById('avgTime').textContent = avg;
+        document.getElementById('maxTime').textContent = max;
+        document.getElementById('minTime').textContent = min;
+        document.getElementById('totalRequests').textContent = validValues.length;
+    }
+
+    function createChart(chartType, labels, values, apiName) {
+        const ctx = document.getElementById('perfChart').getContext('2d');
+        
+        if (perfChart) {
+            perfChart.destroy();
+        }
+
+        const color = getChartColor(0);
+        let chartConfig = {
+            type: chartTypeMap[chartType],
+            data: {},
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top'
+                    }
+                }
+            }
+        };
+
+        if (chartType === 'scatter') {
+            chartConfig.data = {
+                datasets: [{
+                    label: `Response Time - ${apiName}`,
+                    data: convertToScatterData(labels, values),
+                    borderColor: color.border,
+                    backgroundColor: color.bg,
+                    pointRadius: 5,
+                    pointHoverRadius: 7
+                }]
+            };
+            chartConfig.options.scales = {
+                x: { title: { display: true, text: 'Request Number' } },
+                y: { title: { display: true, text: 'Response Time (ms)' }, beginAtZero: true }
+            };
+        } else if (chartType === 'pie' || chartType === 'doughnut') {
+            const pieColors = ['#0d6efd', '#198754', '#fd7e14', '#dc3545', '#0dcaf0', '#6f42c1', '#20c997'];
+            chartConfig.data = {
+                labels: labels,
+                datasets: [{
+                    label: `Response Time - ${apiName}`,
+                    data: values,
+                    backgroundColor: pieColors.slice(0, values.length),
+                    borderColor: '#fff',
+                    borderWidth: 2
+                }]
+            };
+        } else if (chartType === 'area') {
+            chartConfig.data = {
+                labels: labels,
+                datasets: [{
+                    label: `Response Time - ${apiName}`,
+                    data: values,
+                    borderColor: color.border,
+                    backgroundColor: color.bg,
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 4,
+                    pointHoverRadius: 6
+                }]
+            };
+            chartConfig.options.scales = {
+                y: { beginAtZero: true, title: { display: true, text: 'Response Time (ms)' } }
+            };
+        } else {
+            chartConfig.data = {
+                labels: labels,
+                datasets: [{
+                    label: `Response Time - ${apiName}`,
+                    data: values,
+                    borderColor: color.border,
+                    backgroundColor: chartType === 'bar' ? color.bg : 'rgba(13, 110, 253, 0.1)',
+                    fill: chartType === 'line',
+                    tension: 0.3,
+                    pointRadius: 4,
+                    pointHoverRadius: 6
+                }]
+            };
+            chartConfig.options.scales = {
+                y: { beginAtZero: true, title: { display: true, text: 'Response Time (ms)' } }
+            };
+        }
+
+        perfChart = new Chart(ctx, chartConfig);
+        updateStatistics(values);
+    }
+
+    function updateChart(apiId, chartType, dataLimit) {
+        const data = apiChartData[apiId] || apiChartData[String(apiId)];
+        if (data) {
+            let labels = data.labels.slice(-dataLimit);
+            let values = data.values.slice(-dataLimit);
+            document.getElementById('chartTitle').textContent = `${getChartTypeLabel(chartType)} - ${data.name}`;
+            createChart(chartType, labels, values, data.name);
+        }
+    }
+
+    async function refreshChartData() {
+        try {
+            const res = await fetch("{{ url_for('main.get_api_chart_data') }}");
+            if (!res.ok) throw new Error('Network response was not ok');
+            apiChartData = await res.json();
+            const apiId = document.getElementById('apiSelector').value;
+            const chartType = document.querySelector('input[name="chartType"]:checked').value;
+            const dataRange = parseInt(document.getElementById('dataRange').value);
+            if (apiId) updateChart(apiId, chartType, dataRange);
+        } catch (error) {
+            console.error('Error refreshing chart data:', error);
+        }
+    }
+
+    document.getElementById('apiSelector').addEventListener('change', function() {
+        const chartType = document.querySelector('input[name="chartType"]:checked').value;
+        const dataRange = parseInt(document.getElementById('dataRange').value);
+        updateChart(this.value, chartType, dataRange);
+    });
+
+    document.querySelectorAll('input[name="chartType"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            const apiId = document.getElementById('apiSelector').value;
+            const dataRange = parseInt(document.getElementById('dataRange').value);
+            updateChart(apiId, this.value, dataRange);
+        });
+    });
+
+    document.getElementById('dataRange').addEventListener('change', function() {
+        const apiId = document.getElementById('apiSelector').value;
+        const chartType = document.querySelector('input[name="chartType"]:checked').value;
+        updateChart(apiId, chartType, parseInt(this.value));
+    });
+
+    document.getElementById('refreshBtn').addEventListener('click', refreshChartData);
+
+    window.addEventListener('load', function() {
+        const apiId = document.getElementById('apiSelector').value;
+        if (apiId) updateChart(apiId, 'line', 10);
+    });
+
+    setInterval(refreshChartData, 10000);
+</script>
+
+{% endblock %}

@@ -1,0 +1,112 @@
+# .gitignore for API Monitor Project
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+.project
+.pydevproject
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.hypothesis/
+coverage.xml
+*.cover
+.coverage.*
+
+# Database
+instance/
+*.db
+*.sqlite
+*.sqlite3
+database.db
+
+# Logs
+logs/
+*.log
+*.pot
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Docker
+.dockerignore
+Dockerfile.local
+docker-compose.override.yml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Node (for frontend tools if needed)
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Jupyter
+.ipynb_checkpoints
+*.ipynb_checkpoints
+
+# Backup files
+*.bak
+*.backup
+*~
+
+# Temporary files
+*.tmp
+*.temp
+tmp/
+
+# IDE settings
+*.sublime-workspace
+*.sublime-project
+
+# Misc
+.coverage
+coverage.xml
+*.egg-info/
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pyre/

@@ -1,0 +1,16 @@
+{% extends "layout.html" %}
+{% block content %}
+<h3>Manage Monitors</h3>
+<table class="table table-hover bg-white shadow-sm mt-3">
+    <thead class="table-dark"><tr><th>Name</th><th>URL</th><th>Action</th></tr></thead>
+    <tbody>
+        {% for api in apis %}
+        <tr>
+            <td>{{ api.name }}</td>
+            <td>{{ api.url }}</td>
+            <td><a href="/delete/{{ api.id }}" class="btn btn-danger btn-sm">Remove</a></td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

@@ -1,0 +1,239 @@
+{% extends "layout.html" %}
+{% block content %}
+
+<style>
+    body {
+        background: linear-gradient(135deg, #f0f4ff 0%, #f5f7fa 100%);
+        min-height: 100vh;
+    }
+    
+    .dashboard-container {
+        background: white;
+        border-radius: 15px;
+        padding: 30px;
+        margin-bottom: 30px;
+        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+    }
+
+    .dashboard-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 25px;
+        border-radius: 12px;
+        margin-bottom: 30px;
+        box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+    }
+
+    .dashboard-header h2 {
+        margin: 0;
+        font-size: 2.5rem;
+        font-weight: bold;
+    }
+
+    .dashboard-header .btn-group {
+        display: flex;
+        gap: 10px;
+    }
+
+    .add-api-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 12px;
+        box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+        border: none;
+    }
+
+    .add-api-card .card-header {
+        background: rgba(255, 255, 255, 0.15) !important;
+        border-bottom: 2px solid rgba(255, 255, 255, 0.3);
+        color: white;
+        font-weight: bold;
+        border-radius: 12px 12px 0 0;
+    }
+
+    .add-api-card .card-body {
+        background: white;
+        border-radius: 0 0 12px 12px;
+    }
+
+    .add-api-card .form-label {
+        color: #333;
+        font-weight: 600;
+    }
+
+    .add-api-card .btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        font-weight: bold;
+        padding: 10px 20px;
+    }
+
+    .add-api-card .btn-primary:hover {
+        background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+        transform: translateY(-2px);
+        box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+    }
+
+    .endpoints-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        border: none;
+        overflow: hidden;
+    }
+
+    .endpoints-card .card-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        font-weight: bold;
+        padding: 20px;
+        border: none;
+        font-size: 1.1rem;
+    }
+
+    .table {
+        margin-bottom: 0;
+    }
+
+    .table thead {
+        background: linear-gradient(135deg, #f0f3ff 0%, #e8e8f0 100%);
+    }
+
+    .table tbody tr {
+        border-bottom: 1px solid #e9ecef;
+        transition: all 0.3s ease;
+    }
+
+    .table tbody tr:hover {
+        background-color: #f8f9fa;
+        transform: scale(1.01);
+    }
+
+    .table code {
+        background-color: #f1f3f5;
+        padding: 4px 8px;
+        border-radius: 4px;
+        color: #e83e8c;
+    }
+
+    .badge {
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+    }
+
+    .btn-outline-danger:hover {
+        background: linear-gradient(135deg, #ff6b6b 0%, #ff5252 100%);
+        border-color: #ff5252;
+        color: white;
+        transform: scale(1.05);
+    }
+
+    .btn-info {
+        background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%) !important;
+        border: none;
+        color: white;
+        font-weight: bold;
+    }
+
+    .btn-info:hover {
+        background: linear-gradient(135deg, #38ef7d 0%, #11998e 100%) !important;
+        transform: translateY(-2px);
+    }
+
+    .btn-outline-dark {
+        border: 2px solid #333;
+        color: #333;
+        font-weight: bold;
+    }
+
+    .btn-outline-dark:hover {
+        background: #333;
+        color: white;
+        transform: translateY(-2px);
+    }
+</style>
+
+<div class="dashboard-header d-flex justify-content-between align-items-center">
+    <h2>🚀 API Performance Dashboard</h2>
+    <div class="btn-group">
+        <a href="{{ url_for('main.performance') }}" class="btn btn-sm btn-info">📊 Analytics</a>
+        <a href="{{ url_for('main.export_csv') }}" class="btn btn-sm btn-outline-dark">📥 Download Report</a>
+    </div>
+</div>
+
+<div class="dashboard-container">
+    <div class="row mb-4 justify-content-center">
+        <div class="col-lg-6 col-md-8">
+            <div class="card add-api-card">
+                <div class="card-header">➕ Add New API</div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('main.add_api') }}">
+                        <div class="mb-3">
+                            <label class="form-label">API Name</label>
+                            <input type="text" class="form-control" name="name" placeholder="e.g. My Website" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">URL</label>
+                            <input type="url" class="form-control" name="url" placeholder="https://..." required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Check Interval (sec)</label>
+                            <input type="number" class="form-control" name="interval" value="60" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">✅ Add API</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card endpoints-card mt-4">
+        <div class="card-header">📋 Monitored Endpoints</div>
+        <div class="card-body p-0">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>URL</th>
+                        <th>Status</th>
+                        <th>Latency</th>
+                        <th>Speed</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for api in apis %}
+                    <tr>
+                        <td><strong>{{ api.name }}</strong></td>
+                        <td><code>{{ api.url }}</code></td>
+                        <td>
+                            {% if api_status[api.id].status == 'Active' %}
+                            <span class="badge bg-success">● Active</span>
+                            {% elif api_status[api.id].status == 'Inactive' %}
+                            <span class="badge bg-danger">● Down</span>
+                            {% else %}
+                            <span class="badge bg-secondary">{{ api_status[api.id].status }}</span>
+                            {% endif %}
+                        </td>
+                        <td><strong>{{ api_status[api.id].response_time }} ms</strong></td>
+                        <td>
+                            {% if api_status[api.id].speed == 'Fast' %}
+                            <span class="badge bg-success">⚡ Fast</span>
+                            {% elif api_status[api.id].speed == 'Slow' %}
+                            <span class="badge bg-warning">🐢 Slow</span>
+                            {% else %}
+                            <span class="badge bg-secondary">N/A</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{{ url_for('main.delete_api', id=api.id) }}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Remove this API?')">🗑️ Delete</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

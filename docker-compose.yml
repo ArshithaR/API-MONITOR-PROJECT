@@ -1,0 +1,83 @@
+version: '3.8'
+
+services:
+  # Flask Application
+  web:
+    build: .
+    container_name: api-monitor-web
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_APP=app.py
+      - FLASK_ENV=production
+      - DATABASE_URL=postgresql://api_monitor:secure_password@db:5432/api_monitor
+    depends_on:
+      - db
+      - grafana
+    volumes:
+      - ./instance:/app/instance
+    networks:
+      - api-monitor-network
+    restart: unless-stopped
+
+  # PostgreSQL Database
+  db:
+    image: postgres:15-alpine
+    container_name: api-monitor-db
+    environment:
+      POSTGRES_USER: api_monitor
+      POSTGRES_PASSWORD: secure_password
+      POSTGRES_DB: api_monitor
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - api-monitor-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U api_monitor"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Grafana for Monitoring
+  grafana:
+    image: grafana/grafana:latest
+    container_name: api-monitor-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel
+    volumes:
+      - grafana_storage:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+    networks:
+      - api-monitor-network
+    restart: unless-stopped
+    depends_on:
+      - db
+
+  # Prometheus for Metrics (Optional)
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: api-monitor-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+    networks:
+      - api-monitor-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  grafana_storage:
+  prometheus_data:
+
+networks:
+  api-monitor-network:
+    driver: bridge
