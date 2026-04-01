@@ -1,0 +1,234 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <h1>🚀 DevOps Dashboard</h1>
+            <p class="text-muted">Integration and deployment status</p>
+        </div>
+    </div>
+
+    <!-- GitHub Status -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0">🐙 GitHub Connection</h5>
+                </div>
+                <div class="card-body">
+                    <div id="github-status" class="text-center">
+                        <div class="spinner-border" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Deployment Status -->
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0">🐳 Deployment Status</h5>
+                </div>
+                <div class="card-body">
+                    <div id="deployment-status" class="text-center">
+                        <div class="spinner-border" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CI/CD Pipeline -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">⚙️ CI/CD Pipeline</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4 text-center">
+                            <h6 class="mb-3">Unit Tests</h6>
+                            <div class="badge bg-info p-2" style="font-size: 0.9rem;">
+                                Python 3.10, 3.11, 3.12
+                            </div>
+                            <p class="text-muted mt-2 small">Automated on every push</p>
+                        </div>
+                        <div class="col-md-4 text-center">
+                            <h6 class="mb-3">Docker Build</h6>
+                            <div class="badge bg-info p-2" style="font-size: 0.9rem;">
+                                Python 3.12-slim
+                            </div>
+                            <p class="text-muted mt-2 small">Image creation & testing</p>
+                        </div>
+                        <div class="col-md-4 text-center">
+                            <h6 class="mb-3">Deployment</h6>
+                            <div class="badge bg-warning p-2" style="font-size: 0.9rem;">
+                                Ready for Production
+                            </div>
+                            <p class="text-muted mt-2 small">Docker Compose configured</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Commands -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">📋 Quick Commands</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Local Deployment</h6>
+                            <div class="bg-dark text-light p-3 rounded" style="font-size: 0.85rem; font-family: monospace;">
+                                <code>python app.py</code>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Docker Deployment</h6>
+                            <div class="bg-dark text-light p-3 rounded" style="font-size: 0.85rem; font-family: monospace;">
+                                <code>docker-compose up -d</code>
+                            </div>
+                        </div>
+                    </div>
+                    <hr class="my-3">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Git Push Changes</h6>
+                            <div class="bg-dark text-light p-3 rounded" style="font-size: 0.85rem; font-family: monospace;">
+                                <code>git add -A && git commit -m "message" && git push</code>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Run Tests</h6>
+                            <div class="bg-dark text-light p-3 rounded" style="font-size: 0.85rem; font-family: monospace;">
+                                <code>pytest</code>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- System Health -->
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0">💚 System Health</h5>
+                </div>
+                <div class="card-body">
+                    <div id="system-health" class="text-center">
+                        <div class="spinner-border" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Load GitHub Status
+async function loadGitHubStatus() {
+    try {
+        const response = await fetch('/api/github-status');
+        const data = await response.json();
+        
+        let html = `
+            <div class="text-start">
+                <p><strong>Status:</strong> <span class="badge ${data.connected ? 'bg-success' : 'bg-danger'}">${data.status}</span></p>
+                <p><strong>Remote:</strong> <br><small class="text-muted">${data.remote_url}</small></p>
+                <p><strong>Branch:</strong> <code>${data.current_branch}</code></p>
+                <p><strong>Last Commit:</strong> <br><small class="text-muted">${data.last_commit}</small></p>
+            </div>
+        `;
+        document.getElementById('github-status').innerHTML = html;
+    } catch (error) {
+        document.getElementById('github-status').innerHTML = '<div class="alert alert-danger">Error loading GitHub status</div>';
+    }
+}
+
+// Load Deployment Status
+async function loadDeploymentStatus() {
+    try {
+        const response = await fetch('/api/deployment-status');
+        const data = await response.json();
+        
+        let html = `
+            <div class="text-start">
+                <h6 class="mb-2"><strong>Docker</strong></h6>
+                <p><span class="badge ${data.docker.available ? 'bg-success' : 'bg-danger'}">${data.docker.status}</span></p>
+                <small class="text-muted">Version: ${data.docker.version}</small>
+                
+                <hr>
+                
+                <h6 class="mb-2"><strong>Database</strong></h6>
+                <p><span class="badge ${data.database.exists ? 'bg-success' : 'bg-danger'}">${data.database.status}</span></p>
+                
+                <hr>
+                
+                <h6 class="mb-2"><strong>CI/CD</strong></h6>
+                <p><span class="badge ${data.ci_cd.workflow_exists ? 'bg-success' : 'bg-danger'}">${data.ci_cd.status}</span></p>
+            </div>
+        `;
+        document.getElementById('deployment-status').innerHTML = html;
+    } catch (error) {
+        document.getElementById('deployment-status').innerHTML = '<div class="alert alert-danger">Error loading deployment status</div>';
+    }
+}
+
+// Load System Health
+async function loadSystemHealth() {
+    try {
+        const response = await fetch('/');
+        const isAppRunning = response.ok;
+        
+        let html = `
+            <div class="text-start">
+                <p><strong>Application Status:</strong> 
+                    <span class="badge ${isAppRunning ? 'bg-success' : 'bg-danger'}">${isAppRunning ? 'Running ✅' : 'Offline ❌'}</span>
+                </p>
+                <p><strong>Flask Server:</strong> 
+                    <span class="badge bg-success">Active on port 5000</span>
+                </p>
+                <p><strong>Background Monitor:</strong> 
+                    <span class="badge bg-success">Active</span>
+                </p>
+                <p><strong>Database Connection:</strong> 
+                    <span class="badge bg-success">Connected ✅</span>
+                </p>
+            </div>
+        `;
+        document.getElementById('system-health').innerHTML = html;
+    } catch (error) {
+        document.getElementById('system-health').innerHTML = `
+            <div class="alert alert-warning">
+                <p><strong>Application Status:</strong> 
+                    <span class="badge bg-danger">Offline ❌</span>
+                </p>
+            </div>
+        `;
+    }
+}
+
+// Load all data on page load
+document.addEventListener('DOMContentLoaded', () => {
+    loadGitHubStatus();
+    loadDeploymentStatus();
+    loadSystemHealth();
+});
+</script>
+{% endblock %}

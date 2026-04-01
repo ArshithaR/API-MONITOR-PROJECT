@@ -107,6 +107,12 @@ def analytics():
 def alerts():
     return render_template('alerts.html')
 
+@main_bp.route('/devops')
+@login_required
+def devops():
+    """DevOps dashboard page"""
+    return render_template('devops.html')
+
 @main_bp.route('/csv')
 @login_required
 def csv_page():
@@ -275,3 +281,113 @@ def get_analytics(api_id):
         'uptime': round((success_count / len(logs) * 100), 2) if logs else 0,
         'success_rate': round((success_count / len(logs) * 100), 2) if logs else 0
     })
+
+@main_bp.route('/api/github-status')
+@login_required
+def get_github_status():
+    """Get GitHub integration status"""
+    try:
+        # Try to get git remote info
+        import subprocess
+        result = subprocess.run(
+            ['git', 'remote', '-v'],
+            capture_output=True,
+            text=True,
+            cwd=r'c:\Users\Rakshitha R\OneDrive\Desktop\api-monitor-project'
+        )
+        has_remote = 'github.com' in result.stdout
+        remote_url = ''
+        if has_remote:
+            lines = result.stdout.strip().split('\n')
+            for line in lines:
+                if 'origin' in line and '(fetch)' in line:
+                    remote_url = line.split()[1]
+                    break
+        
+        # Get last commit info
+        commit_result = subprocess.run(
+            ['git', 'log', '--oneline', '-1'],
+            capture_output=True,
+            text=True,
+            cwd=r'c:\Users\Rakshitha R\OneDrive\Desktop\api-monitor-project'
+        )
+        last_commit = commit_result.stdout.strip() if commit_result.returncode == 0 else 'N/A'
+        
+        # Get current branch
+        branch_result = subprocess.run(
+            ['git', 'rev-parse', '--abbrev-ref', 'HEAD'],
+            capture_output=True,
+            text=True,
+            cwd=r'c:\Users\Rakshitha R\OneDrive\Desktop\api-monitor-project'
+        )
+        current_branch = branch_result.stdout.strip() if branch_result.returncode == 0 else 'unknown'
+        
+        return jsonify({
+            'connected': has_remote,
+            'remote_url': remote_url,
+            'last_commit': last_commit,
+            'current_branch': current_branch,
+            'status': 'Connected ✅' if has_remote else 'Not connected ❌'
+        })
+    except Exception as e:
+        return jsonify({
+            'connected': False,
+            'status': f'Error: {str(e)} ❌',
+            'remote_url': '',
+            'last_commit': 'N/A',
+            'current_branch': 'N/A'
+        }), 500
+
+@main_bp.route('/api/deployment-status')
+@login_required
+def get_deployment_status():
+    """Get deployment status info"""
+    try:
+        import subprocess
+        import os
+        
+        # Check Docker status
+        docker_check = subprocess.run(
+            ['docker', '--version'],
+            capture_output=True,
+            text=True
+        )
+        docker_available = docker_check.returncode == 0
+        docker_version = docker_check.stdout.strip() if docker_available else 'Not installed'
+        
+        # Check for Docker image
+        image_check = subprocess.run(
+            ['docker', 'images', '--format', '{{.Repository}}:{{.Tag}}'],
+            capture_output=True,
+            text=True
+        )
+        has_image = 'api-monitor' in image_check.stdout if image_check.returncode == 0 else False
+        
+        # Check if database exists
+        db_path = r'c:\Users\Rakshitha R\OneDrive\Desktop\api-monitor-project\instance\database.db'
+        db_exists = os.path.exists(db_path)
+        
+        # Check for workflow files
+        workflow_path = r'c:\Users\Rakshitha R\OneDrive\Desktop\api-monitor-project\.github\workflows\python-app.yml'
+        has_workflow = os.path.exists(workflow_path)
+        
+        return jsonify({
+            'docker': {
+                'available': docker_available,
+                'version': docker_version,
+                'image_exists': has_image,
+                'status': 'Available ✅' if docker_available else 'Not installed ❌'
+            },
+            'database': {
+                'exists': db_exists,
+                'path': db_path if db_exists else 'Not found',
+                'status': 'Ready ✅' if db_exists else 'Not initialized ❌'
+            },
+            'ci_cd': {
+                'workflow_exists': has_workflow,
+                'workflow_path': workflow_path if has_workflow else 'Not found',
+                'status': 'Configured ✅' if has_workflow else 'Not configured ❌'
+            }
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500

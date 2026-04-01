@@ -43,7 +43,11 @@ class API(db.Model):
         ).all()
         if not logs:
             return 0
-        return sum(l.response_time for l in logs) / len(logs)
+        # Filter out None values to avoid TypeError
+        response_times = [l.response_time for l in logs if l.response_time is not None]
+        if not response_times:
+            return 0
+        return sum(response_times) / len(response_times)
 
 class APILog(db.Model):
     """API monitoring log"""
