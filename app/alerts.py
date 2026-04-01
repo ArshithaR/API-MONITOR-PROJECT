@@ -72,7 +72,8 @@ def check_api_health(api):
     
     # Check if API is slow
     avg_response_time = sum(l.response_time for l in recent_logs) / len(recent_logs)
-    if avg_response_time > api.threshold_latency:
+    threshold = api.threshold_latency or 1000  # Default to 1000ms if not set
+    if avg_response_time > threshold:
         create_alert(
             api.id,
             api.user_id,
