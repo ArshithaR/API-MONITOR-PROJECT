@@ -71,14 +71,27 @@ def dashboard():
         log = api.get_last_log()
         avg_response = api.get_avg_response_time()
         
+        # Determine status more accurately
+        if not log:
+            status = '⏳ Pending'
+            status_class = 'warning'
+        elif log.status_code == 200:
+            status = '✅ Active'
+            status_class = 'success'
+        else:
+            status = '❌ Down'
+            status_class = 'danger'
+        
         api_data.append({
             'id': api.id,
             'name': api.name,
             'url': api.url,
-            'status': '✅ Active' if log and log.status_code == 200 else '❌ Down' if log else '⏳ Pending',
-            'response_time': f"{log.response_time:.0f}ms" if log else 'N/A',
-            'avg_response_time': f"{avg_response:.0f}ms",
-            'last_checked': log.timestamp.strftime('%Y-%m-%d %H:%M:%S') if log else 'Never'
+            'status': status,
+            'status_class': status_class,
+            'response_time': f"{log.response_time:.0f}ms" if log and log.response_time else 'N/A',
+            'avg_response_time': f"{avg_response:.0f}ms" if avg_response > 0 else 'N/A',
+            'last_checked': log.timestamp.strftime('%Y-%m-%d %H:%M:%S') if log else 'Never',
+            'status_code': log.status_code if log else 'N/A'
         })
     
     return render_template('dashboard.html', apis=api_data)
@@ -93,6 +106,27 @@ def analytics():
 @login_required
 def alerts():
     return render_template('alerts.html')
+
+@main_bp.route('/csv')
+@login_required
+def csv_page():
+    """Display CSV data in a table"""
+    apis = API.query.filter_by(user_id=current_user.id).all()
+    csv_data = []
+    
+    for api in apis:
+        logs = APILog.query.filter_by(api_id=api.id).order_by(APILog.timestamp.desc()).limit(100).all()
+        for log in logs:
+            csv_data.append({
+                'api_name': api.name,
+                'url': api.url,
+                'status_code': log.status_code or 'N/A',
+                'response_time': f"{log.response_time:.0f}ms" if log.response_time else 'N/A',
+                'timestamp': log.timestamp.strftime('%Y-%m-%d %H:%M:%S'),
+                'status': '✅ Success' if log.status_code == 200 else '❌ Failed'
+            })
+    
+    return render_template('csv_data.html', csv_data=csv_data, total=len(csv_data))
 
 @main_bp.route('/export-csv')
 @login_required
@@ -147,12 +181,13 @@ def delete_api(api_id):
 @main_bp.route('/api/chart-data/<int:api_id>')
 @login_required
 def get_chart_data(api_id):
-    """Get chart data for graphs"""
+    """Get chart data for graphs with support for multiple chart types"""
     api = API.query.get_or_404(api_id)
     if api.user_id != current_user.id:
         return jsonify({'error': 'Unauthorized'}), 403
     
     hours = request.args.get('hours', 24, type=int)
+    chart_type = request.args.get('type', 'line')  # line, bar, pie, area
     cutoff = datetime.utcnow() - timedelta(hours=hours)
     
     logs = APILog.query.filter(
@@ -160,12 +195,50 @@ def get_chart_data(api_id):
         APILog.timestamp >= cutoff
     ).order_by(APILog.timestamp.asc()).all()
     
-    return jsonify({
-        'labels': [log.timestamp.strftime('%H:%M') for log in logs],
-        'response_times': [log.response_time for log in logs],
-        'status_codes': [log.status_code for log in logs],
-        'timestamps': [log.timestamp.isoformat() for log in logs]
-    })
+    if not logs:
+        return jsonify({
+            'labels': [],
+            'response_times': [],
+            'status_codes': [],
+            'timestamps': [],
+            'chart_type': chart_type
+        })
+    
+    # Prepare data based on chart type
+    if chart_type == 'pie' or chart_type == 'doughnut':
+        # For pie/doughnut: aggregate by status
+        success = len([l for l in logs if l.status_code == 200])
+        failed = len(logs) - success
+        return jsonify({
+            'labels': ['Success', 'Failed'],
+            'data': [success, failed],
+            'chart_type': chart_type
+        })
+    
+    elif chart_type == 'bar':
+        # Aggregate by hour for bar chart
+        hourly_data = {}
+        for log in logs:
+            hour_key = log.timestamp.strftime('%H:00')
+            if hour_key not in hourly_data:
+                hourly_data[hour_key] = []
+            if log.response_time:
+                hourly_data[hour_key].append(log.response_time)
+        
+        return jsonify({
+            'labels': list(hourly_data.keys()),
+            'response_times': [sum(v)/len(v) if v else 0 for v in hourly_data.values()],
+            'chart_type': chart_type
+        })
+    
+    else:  # line or area (default)
+        return jsonify({
+            'labels': [log.timestamp.strftime('%H:%M') for log in logs],
+            'response_times': [log.response_time if log.response_time else 0 for log in logs],
+            'status_codes': [log.status_code for log in logs],
+            'timestamps': [log.timestamp.isoformat() for log in logs],
+            'chart_type': chart_type
+        })
 
 @main_bp.route('/api/analytics/<int:api_id>')
 @login_required

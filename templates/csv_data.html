@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h2>📊 CSV Data Viewer</h2>
+    </div>
+    <div class="col text-end">
+        <a href="{{ url_for('main.export_csv') }}" class="btn btn-success">📥 Download CSV</a>
+        <a href="{{ url_for('main.dashboard') }}" class="btn btn-secondary">← Back to Dashboard</a>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <p class="text-muted">Total Records: <strong>{{ total }}</strong></p>
+        {% if not csv_data %}
+        <div class="alert alert-info">
+            No data available yet. Add an API and wait for monitoring data to be collected.
+        </div>
+        {% else %}
+        <div class="table-responsive">
+            <table class="table table-hover table-sm">
+                <thead class="table-dark">
+                    <tr>
+                        <th>API Name</th>
+                        <th>URL</th>
+                        <th>Status Code</th>
+                        <th>Response Time</th>
+                        <th>Timestamp</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in csv_data %}
+                    <tr>
+                        <td><strong>{{ row.api_name }}</strong></td>
+                        <td><small>{{ row.url }}</small></td>
+                        <td>
+                            {% if row.status_code != 'N/A' %}
+                                {% if row.status_code == 200 %}
+                                    <span class="badge bg-success">{{ row.status_code }}</span>
+                                {% else %}
+                                    <span class="badge bg-danger">{{ row.status_code }}</span>
+                                {% endif %}
+                            {% else %}
+                                <span class="badge bg-warning">N/A</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ row.response_time }}</td>
+                        <td><small>{{ row.timestamp }}</small></td>
+                        <td>
+                            {% if 'Success' in row.status %}
+                                <span class="badge bg-success">✅ Success</span>
+                            {% else %}
+                                <span class="badge bg-danger">❌ Failed</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+    .table-responsive {
+        max-height: 600px;
+        overflow-y: auto;
+    }
+    .table thead th {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+    }
+</style>
+{% endblock %}
