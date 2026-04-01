@@ -1,0 +1,124 @@
+{% extends "layout.html" %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>📊 Compare APIs</h2>
+    <a href="{{ url_for('main.dashboard') }}" class="btn btn-outline-dark">← Dashboard</a>
+</div>
+
+<div class="row">
+    <div class="col-md-4">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Select APIs</h5>
+            </div>
+            <div class="card-body">
+                <div class="api-checklist">
+                    {% for api in apis %}
+                    <div class="form-check mb-2">
+                        <input class="form-check-input api-checkbox" type="checkbox" value="{{ api.id }}" id="api-{{ api.id }}">
+                        <label class="form-check-label" for="api-{{ api.id }}">
+                            {{ api.name }}
+                        </label>
+                    </div>
+                    {% endfor %}
+                </div>
+                <button class="btn btn-primary w-100 mt-3" id="compare-btn">Compare Selected</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-8">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">Comparison Results</h5>
+            </div>
+            <div class="card-body">
+                <div id="comparison-results" class="table-responsive">
+                    <p class="text-muted">Select APIs above to compare</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.getElementById('compare-btn').addEventListener('click', async function() {
+    const selected = Array.from(document.querySelectorAll('.api-checkbox:checked'))
+        .map(cb => parseInt(cb.value));
+    
+    if (selected.length === 0) {
+        alert('Please select at least one API');
+        return;
+    }
+    
+    const response = await fetch('/api/compare', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ api_ids: selected })
+    });
+    
+    const data = await response.json();
+    
+    // Create comparison table
+    let html = '<table class="table table-bordered">';
+    html += '<thead><tr>';
+    html += '<th>API</th>';
+    html += '<th>Health Score</th>';
+    html += '<th>Avg Response Time</th>';
+    html += '<th>Total Requests</th>';
+    html += '</tr></thead>';
+    html += '<tbody>';
+    
+    for (const api of data) {
+        html += `<tr>`;
+        html += `<td><strong>${api.name}</strong><br><small>${api.url}</small></td>`;
+        html += `<td>${api.health_score.toFixed(2)}</td>`;
+        html += `<td>${api.response_times.length > 0 ? (api.response_times.reduce((a,b) => a+b) / api.response_times.length).toFixed(2) : 'N/A'} ms</td>`;
+        html += `<td>${api.response_times.length}</td>`;
+        html += `</tr>`;
+    }
+    
+    html += '</tbody></table>';
+    
+    // Create comparison chart
+    html += '<div style="position: relative; height: 300px; margin-top: 20px;">';
+    html += '<canvas id="comparisonChart"></canvas>';
+    html += '</div>';
+    
+    document.getElementById('comparison-results').innerHTML = html;
+    
+    // Draw chart
+    setTimeout(() => {
+        const ctx = document.getElementById('comparisonChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: data.map(api => api.name),
+                datasets: [{
+                    label: 'Health Score',
+                    data: data.map(api => api.health_score),
+                    backgroundColor: 'rgba(75, 192, 192, 0.6)',
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100
+                    }
+                }
+            }
+        });
+    }, 100);
+});
+</script>
+
+{% endblock %}

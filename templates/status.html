@@ -1,0 +1,98 @@
+{% extends "layout.html" %}
+{% block content %}
+
+<div class="text-center mb-5">
+    <h1>📊 API Monitor Status</h1>
+    <p class="text-muted">System Overview & Statistics</p>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card text-center shadow-sm border-0">
+            <div class="card-body">
+                <h2 class="text-primary">{{ users_count }}</h2>
+                <p class="text-muted">Active Users</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-center shadow-sm border-0">
+            <div class="card-body">
+                <h2 class="text-success">{{ apis_count }}</h2>
+                <p class="text-muted">APIs Being Monitored</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-center shadow-sm border-0">
+            <div class="card-body">
+                <h2 class="text-info">{{ logs_count }}</h2>
+                <p class="text-muted">Total Log Entries</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0">🟢 System Status</h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-md-6">
+                        <h6 class="fw-bold">Monitoring Engine</h6>
+                        <span class="badge bg-success fs-6">✓ Running</span>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="fw-bold">Database</h6>
+                        <span class="badge bg-success fs-6">✓ Connected</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-12">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">📈 System Information</h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled">
+                    <li><strong>Version:</strong> 2.0.0</li>
+                    <li><strong>Build Date:</strong> {{ 'now' | strftime }}</li>
+                    <li><strong>Database Type:</strong> SQLite</li>
+                    <li><strong>Check Interval:</strong> 10 seconds</li>
+                    <li><strong>Features Available:</strong>
+                        <ul>
+                            <li>✓ Real-time monitoring</li>
+                            <li>✓ Health scoring</li>
+                            <li>✓ Alert management</li>
+                            <li>✓ Advanced analytics</li>
+                            <li>✓ API comparison</li>
+                            <li>✓ CSV export</li>
+                            <li>✓ Downtime prediction</li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-12">
+        <div class="text-center">
+            <p class="text-muted">
+                <strong>Need to monitor your APIs?</strong>
+            </p>
+            <a href="{{ url_for('main.index') }}" class="btn btn-primary btn-lg">Get Started</a>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

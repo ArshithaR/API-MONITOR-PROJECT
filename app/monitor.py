@@ -1,6 +1,8 @@
 import requests
 import time
 from .models import db, API, Log
+from .analytics import update_api_health_scores
+from .alerts import check_api_health
 from datetime import datetime, timedelta
 
 def monitor_task(app):
@@ -9,8 +11,9 @@ def monitor_task(app):
             apis = API.query.all()
             now = datetime.utcnow()
             for api in apis:
+                interval = api.interval if api.interval else 300  # Default to 5 minutes
                 last_log = Log.query.filter_by(api_id=api.id).order_by(Log.timestamp.desc()).first()
-                if last_log is None or (now - last_log.timestamp) > timedelta(seconds=api.interval):
+                if last_log is None or (now - last_log.timestamp) > timedelta(seconds=interval):
                     try:
                         start = time.time()
                         r = requests.get(api.url, timeout=5)
@@ -21,4 +24,11 @@ def monitor_task(app):
                     
                     db.session.add(log)
                     db.session.commit()
-            time.sleep(10) # Checks every 10 seconds
+                    
+                    # Update health scores
+                    update_api_health_scores(api.id)
+                    
+                    # Check for alerts
+                    check_api_health(api)
+            
+            time.sleep(10)  # Checks every 10 seconds

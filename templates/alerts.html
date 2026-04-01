@@ -1,0 +1,60 @@
+{% extends "layout.html" %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>🚨 Alerts & Notifications</h2>
+    <a href="{{ url_for('main.dashboard') }}" class="btn btn-outline-dark">← Dashboard</a>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-danger text-white">
+                <h5 class="mb-0">Alert History</h5>
+            </div>
+            <div class="card-body">
+                {% if alerts %}
+                <div style="max-height: 600px; overflow-y: auto;">
+                    {% for alert in alerts %}
+                    <div class="alert alert-{{ 'danger' if alert.severity == 'critical' else 'warning' if alert.severity == 'warning' else 'info' }} d-flex justify-content-between align-items-center mb-3">
+                        <div>
+                            <strong>{{ alert.message }}</strong>
+                            <br>
+                            <small>{{ alert.alert_type | upper }} • {{ alert.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</small>
+                        </div>
+                        {% if not alert.is_read %}
+                        <button class="btn btn-sm btn-outline-dark mark-read" data-alert-id="{{ alert.id }}">Mark as Read</button>
+                        {% else %}
+                        <span class="badge bg-success">Read</span>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <h5 class="text-muted">✌️ No alerts yet!</h5>
+                    <p class="text-muted">All your APIs are running smoothly.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.querySelectorAll('.mark-read').forEach(btn => {
+    btn.addEventListener('click', function() {
+        const alertId = this.dataset.alertId;
+        fetch(`/alert/${alertId}/read`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        }).then(r => r.json()).then(data => {
+            location.reload();
+        });
+    });
+});
+</script>
+
+{% endblock %}
