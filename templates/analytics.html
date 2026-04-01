@@ -1,0 +1,226 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h2>📈 Analytics</h2>
+    </div>
+    <div class="col text-end">
+        <a href="{{ url_for('main.dashboard') }}" class="btn btn-secondary">← Back to Dashboard</a>
+    </div>
+</div>
+
+<div class="row">
+    {% if apis %}
+    <div class="col-md-12 mb-4">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Select API to View Analytics</h5>
+                <div class="btn-group w-100" role="group">
+                    {% for api in apis %}
+                    <button type="button" class="btn btn-outline-primary api-selector" data-api-id="{{ api.id }}" data-api-name="{{ api.name }}">
+                        {{ api.name }}
+                    </button>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="analyticsContainer" style="display:none;">
+        <!-- Metrics Cards -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <p class="text-muted">Total Requests</p>
+                        <h3 id="totalRequests">0</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <p class="text-muted">Success Rate</p>
+                        <h3 id="successRate">0%</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <p class="text-muted">Avg Response Time</p>
+                        <h3 id="avgResponse">0ms</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <p class="text-muted">Uptime</p>
+                        <h3 id="uptime">0%</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Response Time (ms)</h5>
+                        <div class="chart-container">
+                            <canvas id="responseTimeChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Request Status</h5>
+                        <div class="chart-container">
+                            <canvas id="statusChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Detailed Table -->
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Recent Requests</h5>
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Timestamp</th>
+                            <th>Status Code</th>
+                            <th>Response Time (ms)</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="requestsTable">
+                        <tr><td colspan="4" class="text-center text-muted">Select an API to view data</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    {% else %}
+    <div class="col">
+        <div class="alert alert-info">
+            <h5>No APIs to analyze</h5>
+            <p><a href="{{ url_for('main.dashboard') }}">Go to Dashboard</a> and add an API first.</p>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+let responseTimeChart, statusChart;
+
+document.querySelectorAll('.api-selector').forEach(btn => {
+    btn.addEventListener('click', function() {
+        const apiId = this.dataset.apiId;
+        const apiName = this.dataset.apiName;
+        loadAnalytics(apiId, apiName);
+    });
+});
+
+function loadAnalytics(apiId, apiName) {
+    // Show analytics container
+    document.getElementById('analyticsContainer').style.display = 'block';
+    
+    // Load metrics
+    fetch(`{{ url_for('main.get_analytics', api_id=0) }}`.replace('0', apiId))
+        .then(r => r.json())
+        .then(data => {
+            document.getElementById('totalRequests').textContent = data.total_requests;
+            document.getElementById('successRate').textContent = data.success_rate.toFixed(1) + '%';
+            document.getElementById('avgResponse').textContent = data.avg_response_time.toFixed(0) + 'ms';
+            document.getElementById('uptime').textContent = data.uptime.toFixed(1) + '%';
+        });
+    
+    // Load chart data
+    fetch(`{{ url_for('main.get_chart_data', api_id=0) }}`.replace('0', apiId) + '?hours=24')
+        .then(r => r.json())
+        .then(data => {
+            updateCharts(data);
+            updateTable(data);
+        });
+}
+
+function updateCharts(data) {
+    const ctx1 = document.getElementById('responseTimeChart').getContext('2d');
+    const ctx2 = document.getElementById('statusChart').getContext('2d');
+    
+    // Destroy existing charts if they exist
+    if (responseTimeChart) responseTimeChart.destroy();
+    if (statusChart) statusChart.destroy();
+    
+    // Response Time Chart
+    responseTimeChart = new Chart(ctx1, {
+        type: 'line',
+        data: {
+            labels: data.labels,
+            datasets: [{
+                label: 'Response Time (ms)',
+                data: data.response_times,
+                borderColor: '#667eea',
+                backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                tension: 0.4,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: true } }
+        }
+    });
+    
+    // Status Chart (Success vs Failed)
+    const successCount = data.status_codes.filter(s => s === 200).length;
+    const failedCount = data.status_codes.length - successCount;
+    
+    statusChart = new Chart(ctx2, {
+        type: 'doughnut',
+        data: {
+            labels: ['Success', 'Failed'],
+            datasets: [{
+                data: [successCount, failedCount],
+                backgroundColor: ['#10b981', '#ef4444']
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false
+        }
+    });
+}
+
+function updateTable(data) {
+    const tbody = document.getElementById('requestsTable');
+    tbody.innerHTML = '';
+    
+    for (let i = Math.max(0, data.timestamps.length - 20); i < data.timestamps.length; i++) {
+        const time = new Date(data.timestamps[i]).toLocaleString();
+        const status = data.status_codes[i];
+        const responseTime = data.response_times[i] || 'N/A';
+        const statusBadge = status === 200 ? '<span class="badge bg-success">Success</span>' : '<span class="badge bg-danger">Failed</span>';
+        
+        tbody.innerHTML += `
+            <tr>
+                <td>${time}</td>
+                <td>${status}</td>
+                <td>${responseTime}ms</td>
+                <td>${statusBadge}</td>
+            </tr>
+        `;
+    }
+}
+</script>
+{% endblock %}

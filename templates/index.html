@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center mt-5">
+    <div class="col-md-6 text-center">
+        <div class="card">
+            <div class="card-body">
+                <h1 class="card-title mb-4">📊 API Monitor</h1>
+                <p class="card-text text-muted">Monitor your APIs with real-time data, analytics, and alerts</p>
+                <div class="d-grid gap-2">
+                    <a href="{{ url_for('auth.login') }}" class="btn btn-primary btn-lg">Login</a>
+                    <a href="{{ url_for('auth.register') }}" class="btn btn-outline-primary btn-lg">Create Account</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

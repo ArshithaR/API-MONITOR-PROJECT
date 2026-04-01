@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h2>📊 Dashboard</h2>
+    </div>
+    <div class="col text-end">
+        <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addApiModal">➕ Add New API</button>
+    </div>
+</div>
+
+<div class="row">
+    {% if apis %}
+        {% for api in apis %}
+        <div class="col-md-4 mb-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">{{ api.name }}</h5>
+                    <p class="card-text text-muted">{{ api.url }}</p>
+                    
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <small class="text-muted">Status</small>
+                            <p class="{% if 'Active' in api.status %}status-up{% else %}status-down{% endif %}">{{ api.status }}</p>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted">Response Time</small>
+                            <p><strong>{{ api.response_time }}</strong></p>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <small class="text-muted">Avg Response</small>
+                            <p><strong>{{ api.avg_response_time }}</strong></p>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted">Last Checked</small>
+                            <p><small>{{ api.last_checked }}</small></p>
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('main.analytics') }}?api_id={{ api.id }}" class="btn btn-sm btn-info">📈 Analytics</a>
+                        <form method="POST" action="{{ url_for('main.delete_api', api_id=api.id) }}" style="display:inline;">
+                            <button type="submit" class="btn btn-sm btn-danger w-100" onclick="return confirm('Delete this API?');">🗑️ Delete</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+    <div class="col">
+        <div class="alert alert-info">
+            <h5>No APIs added yet</h5>
+            <p>Click the "Add New API" button to start monitoring your first API.</p>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Add API Modal -->
+<div class="modal fade" id="addApiModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" action="{{ url_for('main.add_api') }}">
+                <div class="modal-header">
+                    <h5 class="modal-title">Add New API</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="name" class="form-label">API Name</label>
+                        <input type="text" class="form-control" id="name" name="name" placeholder="e.g., Google API" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="url" class="form-label">API URL</label>
+                        <input type="url" class="form-control" id="url" name="url" placeholder="https://api.example.com" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="interval" class="form-label">Check Interval (seconds)</label>
+                        <input type="number" class="form-control" id="interval" name="interval" value="60" min="10">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add API</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
