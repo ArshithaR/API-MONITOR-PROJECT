@@ -1,14 +1,17 @@
-from flask import Blueprint, render_template, redirect, url_for, request, jsonify, flash, send_file
+from flask import Blueprint, render_template, redirect, url_for, request, jsonify, flash
 from flask_login import login_user, logout_user, login_required, current_user
 from app import db
 from app.models import User, API, APILog
 from datetime import datetime, timedelta
+from pathlib import Path
 import csv
-from io import StringIO, BytesIO
+from io import StringIO
 import requests
+import os
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
 main_bp = Blueprint('main', __name__)
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 # ==================== AUTHENTICATION ====================
 
@@ -73,13 +76,13 @@ def dashboard():
         
         # Determine status more accurately
         if not log:
-            status = '⏳ Pending'
+            status = 'Pending'
             status_class = 'warning'
         elif log.status_code == 200:
-            status = '✅ Active'
+            status = 'Active'
             status_class = 'success'
         else:
-            status = '❌ Down'
+            status = 'Down'
             status_class = 'danger'
         
         api_data.append({
@@ -111,7 +114,9 @@ def alerts():
 @login_required
 def devops():
     """DevOps dashboard page"""
-    return render_template('devops.html')
+    grafana_url = os.environ.get("GRAFANA_URL", "http://localhost:3000")
+    prometheus_url = os.environ.get("PROMETHEUS_URL", "http://localhost:9090")
+    return render_template('devops.html', grafana_url=grafana_url, prometheus_url=prometheus_url)
 
 @main_bp.route('/csv')
 @login_required
@@ -129,7 +134,7 @@ def csv_page():
                 'status_code': log.status_code or 'N/A',
                 'response_time': f"{log.response_time:.0f}ms" if log.response_time else 'N/A',
                 'timestamp': log.timestamp.strftime('%Y-%m-%d %H:%M:%S'),
-                'status': '✅ Success' if log.status_code == 200 else '❌ Failed'
+                'status': 'Success' if log.status_code == 200 else 'Failed'
             })
     
     return render_template('csv_data.html', csv_data=csv_data, total=len(csv_data))
@@ -293,7 +298,7 @@ def get_github_status():
             ['git', 'remote', '-v'],
             capture_output=True,
             text=True,
-            cwd=r'c:\Users\Rakshitha R\OneDrive\Desktop\api-monitor-project'
+            cwd=str(PROJECT_ROOT)
         )
         has_remote = 'github.com' in result.stdout
         remote_url = ''
@@ -309,7 +314,7 @@ def get_github_status():
             ['git', 'log', '--oneline', '-1'],
             capture_output=True,
             text=True,
-            cwd=r'c:\Users\Rakshitha R\OneDrive\Desktop\api-monitor-project'
+            cwd=str(PROJECT_ROOT)
         )
         last_commit = commit_result.stdout.strip() if commit_result.returncode == 0 else 'N/A'
         
@@ -318,7 +323,7 @@ def get_github_status():
             ['git', 'rev-parse', '--abbrev-ref', 'HEAD'],
             capture_output=True,
             text=True,
-            cwd=r'c:\Users\Rakshitha R\OneDrive\Desktop\api-monitor-project'
+            cwd=str(PROJECT_ROOT)
         )
         current_branch = branch_result.stdout.strip() if branch_result.returncode == 0 else 'unknown'
         
@@ -327,12 +332,12 @@ def get_github_status():
             'remote_url': remote_url,
             'last_commit': last_commit,
             'current_branch': current_branch,
-            'status': 'Connected ✅' if has_remote else 'Not connected ❌'
+            'status': 'Connected' if has_remote else 'Not connected'
         })
     except Exception as e:
         return jsonify({
             'connected': False,
-            'status': f'Error: {str(e)} ❌',
+            'status': f'Error: {str(e)}',
             'remote_url': '',
             'last_commit': 'N/A',
             'current_branch': 'N/A'
@@ -364,29 +369,40 @@ def get_deployment_status():
         has_image = 'api-monitor' in image_check.stdout if image_check.returncode == 0 else False
         
         # Check if database exists
-        db_path = r'c:\Users\Rakshitha R\OneDrive\Desktop\api-monitor-project\instance\database.db'
-        db_exists = os.path.exists(db_path)
+        db_path = PROJECT_ROOT / 'instance' / 'database.db'
+        db_exists = db_path.exists()
         
         # Check for workflow files
-        workflow_path = r'c:\Users\Rakshitha R\OneDrive\Desktop\api-monitor-project\.github\workflows\python-app.yml'
-        has_workflow = os.path.exists(workflow_path)
+        workflow_path = PROJECT_ROOT / '.github' / 'workflows' / 'python-app.yml'
+        has_workflow = workflow_path.exists()
+        grafana_path = PROJECT_ROOT / 'monitoring' / 'grafana'
+        prometheus_path = PROJECT_ROOT / 'monitoring' / 'prometheus' / 'prometheus.yml'
+        has_grafana = grafana_path.exists()
+        has_prometheus = prometheus_path.exists()
         
         return jsonify({
             'docker': {
                 'available': docker_available,
                 'version': docker_version,
                 'image_exists': has_image,
-                'status': 'Available ✅' if docker_available else 'Not installed ❌'
+                'status': 'Available' if docker_available else 'Not installed'
             },
             'database': {
                 'exists': db_exists,
-                'path': db_path if db_exists else 'Not found',
-                'status': 'Ready ✅' if db_exists else 'Not initialized ❌'
+                'path': str(db_path) if db_exists else 'Not found',
+                'status': 'Ready' if db_exists else 'Not initialized'
             },
             'ci_cd': {
                 'workflow_exists': has_workflow,
-                'workflow_path': workflow_path if has_workflow else 'Not found',
-                'status': 'Configured ✅' if has_workflow else 'Not configured ❌'
+                'workflow_path': str(workflow_path) if has_workflow else 'Not found',
+                'status': 'Configured' if has_workflow else 'Not configured'
+            },
+            'observability': {
+                'grafana_exists': has_grafana,
+                'prometheus_exists': has_prometheus,
+                'grafana_path': str(grafana_path) if has_grafana else 'Not found',
+                'prometheus_path': str(prometheus_path) if has_prometheus else 'Not found',
+                'status': 'Configured' if has_grafana and has_prometheus else 'Not configured'
             }
         })
     except Exception as e:
